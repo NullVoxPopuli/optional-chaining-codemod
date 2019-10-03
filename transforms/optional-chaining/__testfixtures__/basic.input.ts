@@ -1,0 +1,8 @@
+foo && foo.bar;
+foo && foo.bar && foo.bar.baz;
+foo && foo.bar && foo.bar.baz();
+
+(foo || {}).bar;
+((foo || {}).bar || {}).baz;
+((foo || {}).bar || {}).baz();
+
