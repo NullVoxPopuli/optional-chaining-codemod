@@ -1,6 +1,6 @@
 {
   "name": "@nullvoxpopuli/optional-chaining-codemod",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "scripts": {
     "lint": "eslint --cache .",
