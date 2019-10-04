@@ -2,6 +2,7 @@
   "name": "@nullvoxpopuli/optional-chaining-codemod",
   "version": "0.1.0",
   "private": false,
+  "license": "MIT",
   "scripts": {
     "lint": "eslint --cache .",
     "test": "codemod-cli test",
