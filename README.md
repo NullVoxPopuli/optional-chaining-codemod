@@ -1,7 +1,27 @@
-# typescript-optional-chaining-codemod
+# optional-chaining-codemod
 
+Transforms:
 
-A collection of codemod's for typescript-optional-chaining-codemod.
+```
+foo && foo.bar;
+foo.bar && foo.bar.baz;
+
+(foo || {}).bar;
+((foo || {}).bar || {}).baz;
+((foo || {}).bar || {}).baz();
+```
+
+to
+
+```
+foo?.bar;
+foo.bar?.baz;
+
+foo?.bar;
+foo?.bar?.baz;
+foo?.bar?.baz();
+```
+
 
 ## Usage
 
