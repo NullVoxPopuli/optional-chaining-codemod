@@ -1,41 +1,5 @@
 const { getParser } = require('codemod-cli').jscodeshift;
 
-function astPrinter(ast, indent = 0) {
-  if (!ast) {
-    return;
-  }
-
-  let skip = [
-    'loc',
-    'start',
-    'end',
-    'prefix',
-    'postfix',
-    'label',
-    'keyword',
-    'beforeExpr',
-    'startsExpr',
-    'isAssign',
-    'rihtAssociative',
-  ];
-  let keys = Object.keys(ast);
-
-  for (let i = 0; i < keys.length; i++) {
-    let key = keys[i];
-
-    // if (skip.includes(key)) {
-    //   continue;
-    // }
-    let value = ast[key];
-
-    if (key === 'value' && value === '?.') {
-      console.log(key, ':', value);
-    } else if (!skip.includes(key)) {
-      astPrinter(value, indent + 2);
-    }
-  }
-}
-
 function transformer(file, api) {
   const j = getParser(api);
   // const options = getOptions();
@@ -90,13 +54,23 @@ function transformLogicalExpressions(j, root) {
     }
   }
 
+  function handleCallExpression(path, left, callExp) {
+    let leftStr = memberExpressionToString(left);
+    let rightStr = memberExpressionToString(callExp.callee);
+
+    if (rightStr.includes(leftStr.replace('?', ''))) {
+      let newRight = rightStr.replace(leftStr, '');
+      j(path).replaceWith(
+        j.callExpression(j.identifier(`${leftStr}?${newRight}`), callExp.arguments)
+      );
+    }
+  }
+
   function handleLogicalExpression(path) {
     let node = path.node || path.value;
     if (!node) return;
 
     let { left, right } = node;
-
-    //console.log('left', left, 'right', right);
 
     if (left.type === 'Identifier') {
       let name = right.object.name;
@@ -109,9 +83,14 @@ function transformLogicalExpressions(j, root) {
     } else if (left.type === 'LogicalExpression') {
       handleLogicalExpression(j(left));
 
-      // transformLogicalExpressions(path, left, right);
-    } else if (left.type === 'MemberExpression') {
-      handleMemberExpression(path, left, right);
+      //transformLogicalExpressions(j, root);
+    } else if (left.type === 'MemberExpression' || left.type === 'OptionalMemberExpression') {
+      if (right.type === 'CallExpression') {
+        handleCallExpression(path, left, right);
+      } else {
+        handleMemberExpression(path, left, right);
+      }
+    } else if (left.type === 'OptionalMemberExpression') {
     } else {
       console.log(left);
     }
@@ -122,6 +101,16 @@ function transformLogicalExpressions(j, root) {
       operator: '&&',
       //left: { type: 'Identifier' },
       right: { type: 'MemberExpression' },
+    })
+    .forEach(path => {
+      handleLogicalExpression(path);
+    });
+
+  root
+    .find(j.LogicalExpression, {
+      operator: '&&',
+      //left: { type: 'Identifier' },
+      right: { type: 'CallExpression' },
     })
     .forEach(path => {
       handleLogicalExpression(path);
