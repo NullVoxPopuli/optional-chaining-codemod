@@ -141,7 +141,7 @@ function transformLogicalExpressions(j, root) {
       }
       return;
     } else if (left.type === 'MemberExpression' || left.type === 'OptionalMemberExpression') {
-      walkTheLeft(left.object, tokenizedRight, offset);
+      //walkTheLeft(left.object, tokenizedRight, offset);
       walkTheLeft(left.property, tokenizedRight, offset + 1);
       return;
     }
@@ -155,12 +155,14 @@ function transformLogicalExpressions(j, root) {
     }
     let [first] = segments;
     let [last, ...leading] = [...segments].reverse();
+    leading.reverse();
 
     if (first === last || leading.length === 0) {
       return first.segment;
     }
 
     let subExp = segmentsToMembers(j, leading);
+    console.log('leading', leading, first);
 
     if (first.maybeFalsey) {
       return j.optionalMemberExpression(subExp, j.identifier(last.segment.name));
