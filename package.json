@@ -1,6 +1,7 @@
 {
-  "name": "optional-chaining-codemod",
+  "name": "@nullvoxpopuli/optional-chaining-codemod",
   "version": "0.1.0",
+  "private": false,
   "scripts": {
     "lint": "eslint --cache .",
     "test": "codemod-cli test",
