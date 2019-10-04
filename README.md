@@ -19,6 +19,7 @@ typescript-optional-chaining-codemod <TRANSFORM NAME> path/of/files/ or/some**/*
 ## Transforms
 
 <!--TRANSFORMS_START-->
+* [optional-chaining](transforms/optional-chaining/README.md)
 <!--TRANSFORMS_END-->
 
 ## Contributing
