@@ -73,15 +73,24 @@ function transformLogicalExpressions(j, root) {
     let { left, right } = node;
 
     if (left.type === 'Identifier') {
-      let name = right.object.name;
+      if (right.type === 'MemberExpression') {
+        let name = right.object.name;
 
-      if (name !== left.name) {
-        return;
+        if (name !== left.name) {
+          return;
+        }
+
+        j(path).replaceWith(j.optionalMemberExpression(j.identifier(left.name), right.property));
+      } else {
+        console.log(left, right);
+        handleCallExpression(path, left, right);
       }
-
-      j(path).replaceWith(j.optionalMemberExpression(j.identifier(left.name), right.property));
     } else if (left.type === 'LogicalExpression') {
-      handleLogicalExpression(j(left));
+      if (right.type === 'CallExpression') {
+        handleCallExpression(path, left.right, right);
+      } else {
+        handleMemberExpression(path, left.right, right);
+      }
 
       //transformLogicalExpressions(j, root);
     } else if (left.type === 'MemberExpression' || left.type === 'OptionalMemberExpression') {
@@ -96,6 +105,110 @@ function transformLogicalExpressions(j, root) {
     }
   }
 
+  function flatTokensFor(node) {
+    let result = [];
+
+    if (node.type === 'MemberExpression') {
+      let { object, property } = node;
+
+      result.push(flatTokensFor(object));
+      result.push({ segment: property, maybeFalsey: false });
+      result = result.flat();
+    } else if (node.type === 'CallExpression') {
+      let { arguments: args, callee } = node;
+      let { object, property } = callee;
+
+      result.push(flatTokensFor(object));
+      result.push({ segment: property, maybeFalsey: false, args });
+      result = result.flat();
+    } else if (node.type === 'Identifier') {
+      result.push({ segment: node, maybeFalsey: false });
+    }
+
+    return result;
+  }
+
+  function walkTheLeft(left, tokenizedRight, offset = 0) {
+    if (left.type === 'LogicalExpression' && left.operator === '&&') {
+      walkTheLeft(left.left, tokenizedRight, offset + 1);
+      return;
+    } else if (left.type === 'Identifier') {
+      let { segment } = tokenizedRight[offset];
+
+      console.log(left.name, segment.name);
+      if (left.name === segment.name) {
+        tokenizedRight[offset].maybeFalsey = true;
+      }
+      return;
+    } else if (left.type === 'MemberExpression' || left.type === 'OptionalMemberExpression') {
+      walkTheLeft(left.object, tokenizedRight, offset);
+      walkTheLeft(left.property, tokenizedRight, offset + 1);
+      return;
+    }
+
+    console.log('unhandeled', left);
+  }
+
+  function segmentsToMembers(j, segments) {
+    if (!segments || segments.length === 0) {
+      return;
+    }
+    let [first] = segments;
+    let [last, ...leading] = [...segments].reverse();
+
+    if (first === last || leading.length === 0) {
+      return first.segment;
+    }
+
+    let subExp = segmentsToMembers(j, leading);
+
+    if (first.maybeFalsey) {
+      return j.optionalMemberExpression(subExp, j.identifier(last.segment.name));
+    }
+
+    return j.memberExpression(subExp, j.identifier(last.segment.name));
+  }
+
+  function tokensToAST(j, path, tokens) {
+    let [last, ...reversed] = [...tokens].reverse();
+    let segments = [...reversed.reverse(), last];
+
+    let isCall = last.hasOwnProperty('args');
+    let newAst;
+
+    if (isCall) {
+      let { args } = last;
+      let memberExp = segmentsToMembers(j, segments);
+
+      newAst = j.callExpression(memberExp, args);
+    } else {
+      newAst = segmentsToMembers(j, segments);
+    }
+
+    return newAst;
+  }
+
+  function handleLogicalExpression2(path) {
+    let node = path.node;
+    let { left, right } = node;
+
+    // We only want to augment what's on the right side, and
+    // eliminate what is on the left
+    let tokenizedRight = flatTokensFor(right);
+
+    // walk the left, and see what can be eliminated,
+    // resulting in maybeFalsey becoming true
+    walkTheLeft(left, tokenizedRight);
+    console.log(tokenizedRight);
+
+    // swap out the right side's tokenized state with AST
+    // left side will be cleaned up next
+    let newRightAst = tokensToAST(j, j(right), tokenizedRight);
+
+    // TODO: verify that everything on the left can be replaced
+    j(path).replaceWith(newRightAst);
+  }
+
   root
     .find(j.LogicalExpression, {
       operator: '&&',
@@ -103,7 +216,7 @@ function transformLogicalExpressions(j, root) {
       right: { type: 'MemberExpression' },
     })
     .forEach(path => {
-      handleLogicalExpression(path);
+      handleLogicalExpression2(path);
     });
 
   root
@@ -113,7 +226,7 @@ function transformLogicalExpressions(j, root) {
       right: { type: 'CallExpression' },
     })
     .forEach(path => {
-      handleLogicalExpression(path);
+      handleLogicalExpression2(path);
     });
 }
 
