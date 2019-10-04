@@ -10,13 +10,14 @@
     "update-docs": "codemod-cli update-docs",
     "coveralls": "cat ./coverage/lcov.info | node node_modules/.bin/coveralls"
   },
-  "bin": "./bin/cli.js",
+  "bin": {
+    "optional-chaining-codemod": "./bin/cli.js"
+  },
   "keywords": [
     "codemod-cli"
   ],
   "dependencies": {
-    "codemod-cli": "^2.1.0",
-    "release-it": "^12.4.2"
+    "codemod-cli": "^2.1.0"
   },
   "devDependencies": {
     "coveralls": "^3.0.6",

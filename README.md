@@ -8,12 +8,17 @@ A collection of codemod's for typescript-optional-chaining-codemod.
 To run a specific codemod from this project, you would run the following:
 
 ```
-npx typescript-optional-chaining-codemod <TRANSFORM NAME> path/of/files/ or/some**/*glob.js
+npx @nullvoxpopuli/optional-chaining-codemod path/of/files/ or/some**/*glob.js
 
 # or
 
-yarn global add typescript-optional-chaining-codemod
-typescript-optional-chaining-codemod <TRANSFORM NAME> path/of/files/ or/some**/*glob.js
+yarn global add @nullvoxpopuli/optional-chaining-codemod
+optional-chaining-codemod path/of/files/ or/some**/*glob.js
+
+# or
+
+volta install @nullvoxpopuli/optional-chaining-codemod
+optional-chaining-codemod path/of/files/ or/some**/*glob.js
 ```
 
 ## Transforms
