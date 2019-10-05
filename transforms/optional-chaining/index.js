@@ -161,10 +161,11 @@ function transformLogicalExpressions(j, root) {
       return first.segment;
     }
 
-    let subExp = segmentsToMembers(j, leading);
-    console.log('leading', leading, first);
+    let subExp = segmentsToMembers(j, [first, ...endlessTail]);
+    let subExpNext = endlessTail[endlessTail.length - 1];
 
-    if (first.maybeFalsey) {
+    console.log(first, last);
+    if (subExpNext && subExpNext.maybeFalsey) {
       return j.optionalMemberExpression(subExp, j.identifier(last.segment.name));
     }
 
