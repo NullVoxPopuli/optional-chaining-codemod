@@ -44,67 +44,6 @@ function transformMemberExpressions(j, root) {
 }
 
 function transformLogicalExpressions(j, root) {
-  function handleMemberExpression(path, left, right) {
-    let leftStr = memberExpressionToString(left);
-    let rightStr = memberExpressionToString(right);
-
-    if (rightStr.includes(leftStr.replace('?', ''))) {
-      let newRight = rightStr.replace(leftStr, '');
-      j(path).replaceWith(j.identifier(`${leftStr}?${newRight}`));
-    }
-  }
-
-  function handleCallExpression(path, left, callExp) {
-    let leftStr = memberExpressionToString(left);
-    let rightStr = memberExpressionToString(callExp.callee);
-
-    if (rightStr.includes(leftStr.replace('?', ''))) {
-      let newRight = rightStr.replace(leftStr, '');
-      j(path).replaceWith(
-        j.callExpression(j.identifier(`${leftStr}?${newRight}`), callExp.arguments)
-      );
-    }
-  }
-
-  function handleLogicalExpression(path) {
-    let node = path.node || path.value;
-    if (!node) return;
-
-    let { left, right } = node;
-
-    if (left.type === 'Identifier') {
-      if (right.type === 'MemberExpression') {
-        let name = right.object.name;
-
-        if (name !== left.name) {
-          return;
-        }
-
-        j(path).replaceWith(j.optionalMemberExpression(j.identifier(left.name), right.property));
-      } else {
-        console.log(left, right);
-        handleCallExpression(path, left, right);
-      }
-    } else if (left.type === 'LogicalExpression') {
-      if (right.type === 'CallExpression') {
-        handleCallExpression(path, left.right, right);
-      } else {
-        handleMemberExpression(path, left.right, right);
-      }
-
-      //transformLogicalExpressions(j, root);
-    } else if (left.type === 'MemberExpression' || left.type === 'OptionalMemberExpression') {
-      if (right.type === 'CallExpression') {
-        handleCallExpression(path, left, right);
-      } else {
-        handleMemberExpression(path, left, right);
-      }
-    } else if (left.type === 'OptionalMemberExpression') {
-    } else {
-      console.log(left);
-    }
-  }
-
   function flatTokensFor(node) {
     let result = [];
 
@@ -135,7 +74,6 @@ function transformLogicalExpressions(j, root) {
     } else if (left.type === 'Identifier') {
       let { segment } = tokenizedRight[offset];
 
-      console.log(left.name, segment.name);
       if (left.name === segment.name) {
         tokenizedRight[offset].maybeFalsey = true;
       }
@@ -149,22 +87,22 @@ function transformLogicalExpressions(j, root) {
     console.log('unhandeled', left);
   }
 
-  function segmentsToMembers(j, segments) {
-    if (!segments || segments.length === 0) {
+  function segmentsToMembers(j, [first, ...tail]) {
+    if (!first) {
       return;
     }
-    let [first] = segments;
-    let [last, ...leading] = [...segments].reverse();
-    leading.reverse();
 
-    if (first === last || leading.length === 0) {
+    let last = tail[tail.length - 1] || first;
+    let endlessTail = tail.slice(0, tail.length - 1);
+
+    if (first === last) {
       return first.segment;
     }
 
     let subExp = segmentsToMembers(j, [first, ...endlessTail]);
     let subExpNext = endlessTail[endlessTail.length - 1];
 
-    console.log(first, last);
+    // console.log(first, last);
     if (subExpNext && subExpNext.maybeFalsey) {
       return j.optionalMemberExpression(subExp, j.identifier(last.segment.name));
     }
@@ -202,7 +140,6 @@ function transformLogicalExpressions(j, root) {
     // walk the left, and see what can be eliminated,
     // resulting in maybeFalsey becoming true
     walkTheLeft(left, tokenizedRight);
-    console.log(tokenizedRight);
 
     // swap out the right side's tokenized state with AST
     // left side will be cleaned up next
@@ -239,15 +176,6 @@ function memberExpressionToString({ object, property }) {
   }
 
   return `${memberExpressionToString(object)}.${property.name}`;
-}
-
-function toOptional(j, memberExp) {
-  return j.optionalMemberExpression(
-    memberExp.object.type === 'MemberExpression'
-      ? toOptional(j, memberExp.object)
-      : memberExp.object,
-    memberExp.property
-  );
 }
 
 module.exports = transformer;
